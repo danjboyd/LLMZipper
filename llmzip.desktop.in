@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=LLM Zipper
+Comment=Zip up selected project files for LLM input
+Exec=./llmzip.pl
+Icon=./icon.png
+Terminal=false
+Categories=Development;Utility;
+StartupNotify=true
+StartupWMClass=llmzip.pl
+Keywords=LLM;AI;Zip;Zipper;Code;

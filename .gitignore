@@ -1,0 +1,30 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Perl / build
+local/
+blib/
+_build/
+Makefile
+Makefile.PL
+Build
+Build.PL
+pm_to_blib
+cover_db/
+
+# LLM Zipper specifics
+.llmzip/
+LLMZips/
+*.zip
+
+# Logs / misc
+*.log
+*.tmp
+*.bak
+llmzip.desktop

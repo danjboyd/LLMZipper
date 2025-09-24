@@ -1,0 +1,508 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  LLM Zipper — GTK3 Glade UI (drop-in)
+  - Primary actions in HeaderBar: Copy to Clipboard, Zip Now, Copy ZIP Path
+  - Consolidated Filters & Profile actions in a hamburger popover
+  - Roots controls with + / – buttons
+  - Left: tri-state project tree; Right: preview table
+  - Status bar with profile and timestamps
+-->
+<interface>
+  <requires lib="gtk+" version="3.20"/>
+
+  <!-- ===================== Consolidated App Menu (Hamburger) ===================== -->
+  <object class="GtkPopover" id="app_menu_popover">
+    <child>
+      <object class="GtkBox">
+        <property name="visible">True</property>
+        <property name="orientation">vertical</property>
+        <property name="margin">8</property>
+        <property name="spacing">8</property>
+
+        <!-- Filters section -->
+        <child>
+          <object class="GtkLabel">
+            <property name="visible">True</property>
+            <property name="xalign">0</property>
+            <property name="use_markup">True</property>
+            <property name="label">&lt;b&gt;Filters&lt;/b&gt;</property>
+          </object>
+        </child>
+
+        <!-- NOTE: only show_hidden_check is wired in the Perl for now; others are future-proof -->
+        <child>
+          <object class="GtkCheckButton" id="show_hidden_check">
+            <property name="visible">True</property>
+            <property name="label">Show hidden</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkCheckButton" id="respect_gitignore_check">
+            <property name="visible">True</property>
+            <property name="label">Respect .gitignore</property>
+            <property name="active">True</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkCheckButton" id="only_modified_check">
+            <property name="visible">True</property>
+            <property name="label">Only modified since last zip</property>
+          </object>
+        </child>
+
+        <child>
+          <object class="GtkSeparator">
+            <property name="visible">True</property>
+            <property name="orientation">horizontal</property>
+          </object>
+        </child>
+
+        <!-- Profiles section -->
+        <child>
+          <object class="GtkLabel">
+            <property name="visible">True</property>
+            <property name="xalign">0</property>
+            <property name="use_markup">True</property>
+            <property name="label">&lt;b&gt;Profiles&lt;/b&gt;</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton" id="profile_new_button">
+            <property name="visible">True</property>
+            <property name="label">New…</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton" id="profile_rename_button">
+            <property name="visible">True</property>
+            <property name="label">Rename…</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton" id="profile_delete_button">
+            <property name="visible">True</property>
+            <property name="label">Delete</property>
+          </object>
+        </child>
+
+      </object>
+    </child>
+  </object>
+
+  <!-- ===================== Main Window ===================== -->
+  <object class="GtkApplicationWindow" id="main_window">
+    <property name="default_width">1200</property>
+    <property name="default_height">800</property>
+    <property name="title">LLM Zipper</property>
+
+    <!-- HeaderBar: primary actions on the right -->
+    <child type="titlebar">
+      <object class="GtkHeaderBar" id="headerbar">
+        <property name="show_close_button">True</property>
+        <property name="title">LLM Zipper</property>
+        <property name="subtitle">Profiles &amp; Roots</property>
+
+        <!-- Right-side primary actions -->
+        <child>
+          <object class="GtkButton" id="copy_clipboard_button">
+            <property name="label">Copy to Clipboard</property>
+            <property name="tooltip_text">Copy selected files as concatenated text</property>
+          </object>
+          <packing>
+            <property name="pack_type">end</property>
+          </packing>
+        </child>
+
+        <child>
+          <object class="GtkButton" id="zip_now_button">
+            <property name="label">Zip Now</property>
+            <property name="tooltip_text">Zip selected files</property>
+          </object>
+          <packing>
+            <property name="pack_type">end</property>
+          </packing>
+        </child>
+
+        <child>
+          <object class="GtkButton" id="copy_path_button">
+            <property name="label">Copy ZIP Path</property>
+            <property name="tooltip_text">Copy last ZIP path (use Ctrl+L then paste in file chooser)</property>
+          </object>
+          <packing>
+            <property name="pack_type">end</property>
+          </packing>
+        </child>
+
+      </object>
+    </child>
+
+    <!-- Body -->
+    <child>
+      <object class="GtkBox" id="main_vbox">
+        <property name="orientation">vertical</property>
+        <property name="spacing">0</property>
+
+        <!-- Compact two-row toolbar -->
+        <child>
+          <object class="GtkGrid" id="toolbar_grid">
+            <property name="column_spacing">8</property>
+            <property name="row_spacing">4</property>
+            <property name="margin">6</property>
+
+            <!-- Row 0: Search + Refresh -->
+            <child>
+              <object class="GtkSearchEntry" id="tree_search_entry">
+                <property name="hexpand">True</property>
+                <property name="placeholder_text">Filter files…</property>
+              </object>
+              <packing>
+                <property name="left_attach">0</property>
+                <property name="top_attach">0</property>
+                <property name="width">6</property>
+              </packing>
+            </child>
+
+            <child>
+              <object class="GtkButton" id="refresh_button">
+                <property name="tooltip_text">Refresh</property>
+                <property name="always_show_image">True</property>
+                <child>
+                  <object class="GtkImage">
+                    <property name="icon_name">view-refresh-symbolic</property>
+                  </object>
+                </child>
+              </object>
+              <packing>
+                <property name="left_attach">6</property>
+                <property name="top_attach">0</property>
+              </packing>
+            </child>
+
+            <!-- Row 1: Roots + Profiles + (Hamburger) -->
+            <child>
+              <object class="GtkLabel">
+                <property name="label">Roots:</property>
+              </object>
+              <packing>
+                <property name="left_attach">0</property>
+                <property name="top_attach">1</property>
+              </packing>
+            </child>
+
+            <child>
+              <object class="GtkComboBoxText" id="roots_combo">
+                <property name="hexpand">False</property>
+              </object>
+              <packing>
+                <property name="left_attach">1</property>
+                <property name="top_attach">1</property>
+              </packing>
+            </child>
+
+            <child>
+              <object class="GtkButton" id="add_root_button">
+                <property name="tooltip_text">Add Root…</property>
+                <property name="always_show_image">True</property>
+                <child>
+                  <object class="GtkImage">
+                    <property name="icon_name">list-add-symbolic</property>
+                  </object>
+                </child>
+              </object>
+              <packing>
+                <property name="left_attach">2</property>
+                <property name="top_attach">1</property>
+              </packing>
+            </child>
+
+            <child>
+              <object class="GtkButton" id="remove_root_button">
+                <property name="tooltip_text">Remove Selected Root</property>
+                <property name="always_show_image">True</property>
+                <child>
+                  <object class="GtkImage">
+                    <property name="icon_name">list-remove-symbolic</property>
+                  </object>
+                </child>
+              </object>
+              <packing>
+                <property name="left_attach">3</property>
+                <property name="top_attach">1</property>
+              </packing>
+            </child>
+
+            <child>
+              <object class="GtkLabel">
+                <property name="label">Profile:</property>
+              </object>
+              <packing>
+                <property name="left_attach">4</property>
+                <property name="top_attach">1</property>
+              </packing>
+            </child>
+
+            <child>
+              <object class="GtkComboBoxText" id="profiles_combo">
+                <property name="hexpand">False</property>
+              </object>
+              <packing>
+                <property name="left_attach">5</property>
+                <property name="top_attach">1</property>
+              </packing>
+            </child>
+
+            <child>
+              <object class="GtkMenuButton" id="app_menu_button">
+                <property name="tooltip_text">Filters &amp; Profile actions</property>
+                <property name="popover">app_menu_popover</property>
+                <child>
+                  <object class="GtkImage">
+                    <property name="icon_name">open-menu-symbolic</property>
+                  </object>
+                </child>
+              </object>
+              <packing>
+                <property name="left_attach">6</property>
+                <property name="top_attach">1</property>
+              </packing>
+            </child>
+
+          </object>
+        </child>
+
+        <!-- Paned layout -->
+        <child>
+          <object class="GtkPaned" id="hpane">
+            <property name="orientation">horizontal</property>
+            <property name="wide_handle">True</property>
+            <property name="vexpand">True</property>
+
+            <!-- Left: Project Tree -->
+            <child>
+              <object class="GtkFrame" id="tree_frame">
+                <property name="label">Project Tree</property>
+                <property name="shadow_type">in</property>
+                <child>
+                  <object class="GtkScrolledWindow" id="tree_scroller">
+                    <property name="hscrollbar_policy">automatic</property>
+                    <property name="vscrollbar_policy">automatic</property>
+                    <child>
+                      <object class="GtkTreeView" id="project_treeview">
+                        <property name="headers_visible">False</property>
+
+                        <!-- Checkbox column (tri-state via "inconsistent") -->
+                        <child>
+                          <object class="GtkTreeViewColumn" id="col_include">
+                            <property name="title">Include</property>
+                            <child>
+                              <object class="GtkCellRendererToggle" id="renderer_toggle">
+                                <property name="activatable">True</property>
+                                <property name="xalign">0.0</property>
+                              </object>
+                              <attributes>
+                                <attribute name="active">0</attribute>
+                                <attribute name="inconsistent">5</attribute>
+                              </attributes>
+                            </child>
+                          </object>
+                        </child>
+
+                        <!-- Name with icon -->
+                        <child>
+                          <object class="GtkTreeViewColumn" id="col_name">
+                            <property name="title">Name</property>
+                              <child>
+                                <object class="GtkCellRendererText" id="renderer_star"/>
+                                <attributes>
+                                  <!-- We'll set icon via a cell-data-func -->
+                                </attributes>
+                              </child>
+
+                            <child>
+                              <object class="GtkCellRendererPixbuf" id="renderer_icon"/>
+                              <attributes>
+                                <attribute name="icon_name">2</attribute>
+                              </attributes>
+                            </child>
+                            <child>
+                              <object class="GtkCellRendererText" id="renderer_text"/>
+                              <attributes>
+                                <attribute name="markup">1</attribute>
+                              </attributes>
+                            </child>
+                          </object>
+                        </child>
+
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+              <packing>
+                <property name="resize">True</property>
+                <property name="shrink">True</property>
+              </packing>
+            </child>
+
+            <!-- Right: Preview -->
+            <child>
+              <object class="GtkNotebook" id="right_notebook">
+                <property name="scrollable">True</property>
+
+                <child>
+                  <object class="GtkBox" id="preview_page">
+                    <property name="orientation">vertical</property>
+                    <property name="spacing">6</property>
+                    <property name="margin">6</property>
+
+                    <child>
+                      <object class="GtkLabel" id="preview_summary_label">
+                        <property name="label">0 files — 0 B</property>
+                        <property name="xalign">0</property>
+                      </object>
+                    </child>
+
+                    <child>
+                      <object class="GtkScrolledWindow">
+                        <property name="vexpand">True</property>
+                        <child>
+                          <object class="GtkTreeView" id="preview_treeview">
+                            <property name="headers_visible">True</property>
+
+                            <child>
+                              <object class="GtkTreeViewColumn">
+                                <property name="title">✔</property>
+                                <child>
+                                  <object class="GtkCellRendererToggle" id="preview_toggle"/>
+                                  <attributes>
+                                    <attribute name="active">0</attribute>
+                                  </attributes>
+                                </child>
+                              </object>
+                            </child>
+
+                            <child>
+                              <object class="GtkTreeViewColumn">
+                                <property name="title">Root</property>
+                                <child>
+                                  <object class="GtkCellRendererText"/>
+                                  <attributes>
+                                    <attribute name="text">1</attribute>
+                                  </attributes>
+                                </child>
+                              </object>
+                            </child>
+
+                            <child>
+                              <object class="GtkTreeViewColumn">
+                                <property name="title">Path</property>
+                                <child>
+                                  <object class="GtkCellRendererText"/>
+                                  <attributes>
+                                    <attribute name="text">2</attribute>
+                                  </attributes>
+                                </child>
+                              </object>
+                            </child>
+
+                            <child>
+                              <object class="GtkTreeViewColumn">
+                                <property name="title">Size</property>
+                                <child>
+                                  <object class="GtkCellRendererText"/>
+                                  <attributes>
+                                    <attribute name="text">3</attribute>
+                                  </attributes>
+                                </child>
+                              </object>
+                            </child>
+
+                            <child>
+                              <object class="GtkTreeViewColumn">
+                                <property name="title">Modified</property>
+                                <child>
+                                  <object class="GtkCellRendererText"/>
+                                  <attributes>
+                                    <attribute name="text">4</attribute>
+                                  </attributes>
+                                </child>
+                              </object>
+                            </child>
+
+                            <child>
+                              <object class="GtkTreeViewColumn">
+                                <property name="title">Reason</property>
+                                <child>
+                                  <object class="GtkCellRendererText"/>
+                                  <attributes>
+                                    <attribute name="text">5</attribute>
+                                  </attributes>
+                                </child>
+                              </object>
+                            </child>
+
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+
+                  </object>
+                </child>
+                <child type="tab">
+                  <object class="GtkLabel">
+                    <property name="label">Preview</property>
+                  </object>
+                </child>
+              </object>
+              <packing>
+                <property name="resize">True</property>
+                <property name="shrink">True</property>
+              </packing>
+            </child>
+
+          </object>
+        </child>
+
+        <!-- Statusbar -->
+        <child>
+          <object class="GtkBox" id="status_box">
+            <property name="orientation">horizontal</property>
+            <property name="spacing">16</property>
+            <property name="margin">6</property>
+            <child>
+              <object class="GtkLabel" id="status_profile_label">
+                <property name="label">Profile: Default</property>
+                <property name="xalign">0</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel" id="status_last_scan_label">
+                <property name="label">Last scan: —</property>
+                <property name="xalign">0</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel" id="status_last_zip_label">
+                <property name="label">Last zip: —</property>
+                <property name="xalign">0</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkSpinner" id="search_spinner">
+                <property name="visible">True</property>   <!-- OK; spinner still needs start() -->
+                <property name="margin-start">8</property>
+              </object>
+              <packing>
+                <property name="pack_type">end</property>  <!-- add this -->
+                <property name="expand">False</property>   <!-- optional -->
+                <property name="fill">False</property>     <!-- optional -->
+              </packing>
+            </child>
+          </object>
+        </child>
+
+      </object>
+    </child>
+  </object>
+</interface>
+
